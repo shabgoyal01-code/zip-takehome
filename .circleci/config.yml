@@ -1,5 +1,5 @@
 # Circle CI: runs on every push and every PR.
-# Runs: Spotless (linter) + unit tests via mvn verify.
+# Steps: checkout → cache restore → Linter (Spotless) → Unit tests → cache save → upload results.
 # Free tier: https://circleci.com/pricing/
 
 version: 2.1
@@ -10,23 +10,31 @@ jobs:
       - image: cimg/openjdk:11.0
     working_directory: ~/project
     steps:
-      - checkout
+      - checkout:
+          name: Checkout code
 
       - restore_cache:
+          name: Restore Maven cache
           keys:
             - maven-v1-{{ checksum "pom.xml" }}
             - maven-v1-
 
       - run:
-          name: Build and verify (Spotless + tests)
-          command: mvn clean verify -B
+          name: Linter (Spotless)
+          command: mvn spotless:check -B
+
+      - run:
+          name: Unit tests
+          command: mvn test -B
 
       - save_cache:
+          name: Save Maven cache
           paths:
             - ~/.m2
           key: maven-v1-{{ checksum "pom.xml" }}
 
       - store_test_results:
+          name: Upload test results
           path: target/surefire-reports
 
 workflows:
